@@ -508,8 +508,7 @@ describe('Upload List', () => {
         name: 'image',
         status: 'done',
         uid: '-12',
-        url:
-          'https://publish-pic-cpu.baidu.com/1296beb3-50d9-4276-885f-52645cbb378e.jpeg@w_228%2ch_152',
+        url: 'https://publish-pic-cpu.baidu.com/1296beb3-50d9-4276-885f-52645cbb378e.jpeg@w_228%2ch_152',
         type: 'image/png',
       },
     ];
@@ -637,14 +636,17 @@ describe('Upload List', () => {
         showUploadList={{
           showRemoveIcon: true,
           showDownloadIcon: true,
-          removeIcon: () => <i>RM</i>,
+          showPreviewIcon: true,
+          removeIcon: <i>RM</i>,
           downloadIcon: <i>DL</i>,
+          previewIcon: <i>PV</i>,
         }}
       >
         <button type="button">upload</button>
       </Upload>,
     );
     expect(wrapper.render()).toMatchSnapshot();
+    wrapper.unmount();
 
     const wrapper2 = mount(
       <Upload
@@ -653,16 +655,16 @@ describe('Upload List', () => {
         showUploadList={{
           showRemoveIcon: true,
           showDownloadIcon: true,
-          removeIcon: <i>RM</i>,
+          showPreviewIcon: true,
+          removeIcon: () => <i>RM</i>,
           downloadIcon: () => <i>DL</i>,
+          previewIcon: () => <i>PV</i>,
         }}
       >
         <button type="button">upload</button>
       </Upload>,
     );
     expect(wrapper2.render()).toMatchSnapshot();
-
-    wrapper.unmount();
     wrapper2.unmount();
   });
 
@@ -1162,19 +1164,51 @@ describe('Upload List', () => {
   });
 
   it('itemRender', () => {
-    const itemRender = (originNode, file, currFileList) => {
+    const onDownload = jest.fn();
+    const onRemove = jest.fn();
+    const onPreview = jest.fn();
+    const itemRender = (originNode, file, currFileList, actions) => {
       const { name, status, uid, url } = file;
       const index = currFileList.indexOf(file);
       return (
-        <span className="custom-item-render">
-          {`uid:${uid} name: ${name} status: ${status} url: ${url}  ${index + 1}/${
-            currFileList.length
-          }`}
-        </span>
+        <div className="custom-item-render">
+          <span>
+            {`uid:${uid} name: ${name} status: ${status} url: ${url}  ${index + 1}/${
+              currFileList.length
+            }`}
+          </span>
+          <span onClick={actions.remove} className="custom-item-render-action-remove">
+            remove
+          </span>
+          <span onClick={actions.download} className="custom-item-render-action-download">
+            download
+          </span>
+          <span onClick={actions.preview} className="custom-item-render-action-preview">
+            preview
+          </span>
+        </div>
       );
     };
-    const wrapper = mount(<UploadList locale={{}} items={fileList} itemRender={itemRender} />);
+    const wrapper = mount(
+      <UploadList
+        onDownload={onDownload}
+        onPreview={onPreview}
+        onRemove={onRemove}
+        locale={{}}
+        items={fileList}
+        itemRender={itemRender}
+      />,
+    );
     expect(wrapper.render()).toMatchSnapshot();
+
+    wrapper.find('.custom-item-render-action-remove').first().simulate('click');
+    expect(onRemove.mock.calls[0][0]).toEqual(fileList[0]);
+
+    wrapper.find('.custom-item-render-action-download').first().simulate('click');
+    expect(onDownload.mock.calls[0][0]).toEqual(fileList[0]);
+
+    wrapper.find('.custom-item-render-action-preview').first().simulate('click');
+    expect(onPreview.mock.calls[0][0]).toEqual(fileList[0]);
 
     wrapper.unmount();
   });

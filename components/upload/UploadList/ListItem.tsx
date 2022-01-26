@@ -30,6 +30,7 @@ export interface ListItemProps {
   showPreviewIcon?: boolean;
   removeIcon?: React.ReactNode | ((file: UploadFile) => React.ReactNode);
   downloadIcon?: React.ReactNode | ((file: UploadFile) => React.ReactNode);
+  previewIcon?: React.ReactNode | ((file: UploadFile) => React.ReactNode);
   iconRender: (file: UploadFile) => React.ReactNode;
   actionIconRender: (
     customIcon: React.ReactNode,
@@ -62,6 +63,7 @@ const ListItem = React.forwardRef(
       showPreviewIcon,
       showRemoveIcon,
       showDownloadIcon,
+      previewIcon: customPreviewIcon,
       removeIcon: customRemoveIcon,
       downloadIcon: customDownloadIcon,
       onPreview,
@@ -206,7 +208,9 @@ const ListItem = React.forwardRef(
         onClick={e => onPreview(file, e)}
         title={locale.previewFile}
       >
-        <EyeOutlined />
+        {typeof customPreviewIcon === 'function'
+          ? customPreviewIcon(file)
+          : customPreviewIcon || <EyeOutlined />}
       </a>
     ) : null;
 
@@ -272,7 +276,13 @@ const ListItem = React.forwardRef(
 
     return (
       <div className={listContainerNameClass} style={style} ref={ref}>
-        {itemRender ? itemRender(item, file, items) : item}
+        {itemRender
+          ? itemRender(item, file, items, {
+              download: onDownload.bind(null, file),
+              preview: onPreview.bind(null, file),
+              remove: onClose.bind(null, file),
+            })
+          : item}
       </div>
     );
   },

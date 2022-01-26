@@ -52,7 +52,10 @@ describe('Upload', () => {
     const data = jest.fn();
     const props = {
       action: 'http://upload.com',
-      beforeUpload: () => new Promise(resolve => setTimeout(() => resolve('success'), 100)),
+      beforeUpload: () =>
+        new Promise(resolve => {
+          setTimeout(() => resolve('success'), 100);
+        }),
       data,
       onChange: ({ file }) => {
         if (file.status !== 'uploading') {
@@ -103,13 +106,13 @@ describe('Upload', () => {
     const props = {
       action: 'http://upload.com',
       beforeUpload: file =>
-        new Promise(resolve =>
+        new Promise(resolve => {
           setTimeout(() => {
             const result = file;
             result.name = 'test.png';
             resolve(result);
-          }, 100),
-        ),
+          }, 100);
+        }),
       data,
       onChange: ({ file }) => {
         if (file.status !== 'uploading') {
@@ -433,7 +436,7 @@ describe('Upload', () => {
 
     wrapper.find('div.ant-upload-list-item .anticon-delete').simulate('click');
 
-    setImmediate(() => {
+    setTimeout(() => {
       wrapper.update();
 
       expect(mockRemove).toHaveBeenCalled();
@@ -499,7 +502,7 @@ describe('Upload', () => {
 
     wrapper.find('div.ant-upload-list-item .anticon-download').simulate('click');
 
-    setImmediate(() => {
+    setTimeout(() => {
       wrapper.update();
 
       expect(props.fileList).toHaveLength(1);
@@ -842,5 +845,48 @@ describe('Upload', () => {
     await act(async () => {
       await sleep();
     });
+  });
+
+  // https://github.com/ant-design/ant-design/issues/30390
+  // IE11 Does not support the File constructor
+  it('should not break in IE if beforeUpload returns false', async () => {
+    const onChange = jest.fn();
+    const wrapper = mount(<Upload beforeUpload={() => false} fileList={[]} onChange={onChange} />);
+    const fileConstructor = () => {
+      throw new TypeError("Object doesn't support this action");
+    };
+    global.File = jest.fn().mockImplementationOnce(fileConstructor);
+
+    await act(async () =>
+      wrapper.find('input').simulate('change', {
+        target: {
+          files: [{ file: 'foo.png' }],
+        },
+      }),
+    );
+
+    expect(onChange.mock.calls[0][0].fileList).toHaveLength(1);
+  });
+
+  // https://github.com/ant-design/ant-design/issues/33819
+  it('should show the animation of the upload children leaving when the upload children becomes null', async () => {
+    const wrapper = mount(
+      <Upload listType="picture-card">
+        <button type="button">upload</button>
+      </Upload>,
+    );
+    wrapper.setProps({ children: null });
+    expect(wrapper.find('.ant-upload-select-picture-card').getDOMNode().style.display).not.toBe(
+      'none',
+    );
+    await act(async () => {
+      await sleep(100);
+      wrapper
+        .find('.ant-upload-select-picture-card')
+        .getDOMNode()
+        .dispatchEvent(new Event('animationend'));
+      await sleep(20);
+    });
+    expect(wrapper.find('.ant-upload-select-picture-card').getDOMNode().style.display).toBe('none');
   });
 });
